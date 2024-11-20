@@ -1,19 +1,15 @@
 package by.bsu.dependency.context;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import by.bsu.dependency.annotation.Bean;
+import by.bsu.dependency.exceptions.ApplicationContextNotStartedException;
+import by.bsu.dependency.exceptions.NoSuchBeanDefinitionException;
 
 
 public class HardCodedSingletonApplicationContext extends AbstractApplicationContext {
-
-    private final Map<String, Class<?>> beanDefinitions;
-    private final Map<String, Object> beans = new HashMap<>();
 
     /**
      * ! Класс существует только для базового примера !
@@ -36,53 +32,50 @@ public class HardCodedSingletonApplicationContext extends AbstractApplicationCon
         );
     }
 
+    
     @Override
     public void start() {
-        beanDefinitions.forEach((beanName, beanClass) -> beans.put(beanName, instantiateBean(beanClass)));
+        contextStatus = ContextStatus.STARTED;
+        beanDefinitions.forEach((beanName, beanClass) -> beansSingletons.put(beanName, instantiateBean(beanClass)));
+        beansSingletons.forEach((beanName, beanObject) ->  {
+            inject(beansSingletons.get(beanName));
+        });
+        beansSingletons.forEach((beanName, beanObject) ->  {
+            invokePostConstruct(beansSingletons.get(beanName));
+        });
     }
 
-    @Override
-    public boolean isRunning() {
-        throw new IllegalStateException("not implemented");
-    }
-
-    /**
-     * В этой реализации отсутствуют проверки статуса контекста (запущен ли он).
-     */
     @Override
     public boolean containsBean(String name) {
-        return beans.containsKey(name);
+        checkIfContextIsRunning();
+        return beansSingletons.containsKey(name);
     }
 
-    /**
-     * В этой реализации отсутствуют проверки статуса контекста (запущен ли он) и исключения в случае отсутствия бина
-     */
     @Override
     public Object getBean(String name) {
-        return beans.get(name);
+        // checkIfContextIsRunning();
+        checkBeanExists(name);
+        return beansSingletons.get(name);
     }
 
     @Override
-    public <T> T getBean(Class<T> clazz) {
-        throw new IllegalStateException("not implemented");
+    protected void checkBeanExists(String name) {
+        if (!containsBean(name)) {
+            throw new NoSuchBeanDefinitionException(name);
+        }
     }
 
     @Override
     public boolean isPrototype(String name) {
-        return false;
+        return !isSingleton(name);
     }
 
     @Override
     public boolean isSingleton(String name) {
+        if (!beanDefinitions.containsKey(name)) {
+            throw new NoSuchBeanDefinitionException(name);
+        }
         return true;
     }
 
-    private <T> T instantiateBean(Class<T> beanClass) {
-        try {
-            return beanClass.getConstructor().newInstance();
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException |
-                 InstantiationException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

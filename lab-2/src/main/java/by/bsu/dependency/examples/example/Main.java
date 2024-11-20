@@ -1,4 +1,4 @@
-package by.bsu.dependency.example;
+package by.bsu.dependency.examples.example;
 
 import by.bsu.dependency.context.ApplicationContext;
 import by.bsu.dependency.context.HardCodedSingletonApplicationContext;
@@ -17,7 +17,5 @@ public class Main {
         firstBean.doSomething();
         otherBean.doSomething();
 
-        // Метод падает, так как в классе HardCodedSingletonApplicationContext не реализовано внедрение зависимостей
-        // otherBean.doSomethingWithFirst();
     }
 }
